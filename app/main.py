@@ -1,6 +1,7 @@
 import pathlib
 import uuid
 import io
+from PIL import Image
 from functools import lru_cache
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
@@ -36,6 +37,7 @@ PHOTO_DIR.mkdir(exist_ok=True)
 app = FastAPI()
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+
 # ------ end templates ---------
 
 
@@ -62,9 +64,12 @@ async def img_echo(file: UploadFile = File(...), settings: Settings = Depends(ge
     if not settings.echo_active:
         raise HTTPException(detail="invalid endpoint", status_code=400)
     file_bytes_str = io.BytesIO(await file.read())
+    try:
+        image = Image.open(file_bytes_str)
+    except:
+        raise HTTPException(detail="invalid image", status_code=400)
     file_name = pathlib.Path(file.filename)
     file_type = file_name.suffix  # jpg or .txt
     destination = PHOTO_DIR / f"{uuid.uuid1()}{file_type}"
-    with open(str(destination), 'wb') as out:
-        out.write(file_bytes_str.read())
+    image.save(destination)
     return destination
